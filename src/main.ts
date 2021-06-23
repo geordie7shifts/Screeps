@@ -1,5 +1,5 @@
 import { ErrorMapper } from "utils/ErrorMapper";
-
+import {Job, JobType} from "./Job";
 declare global {
   /*
     Example types, expand on these or remove them and add your own.
@@ -21,6 +21,10 @@ declare global {
     working: boolean;
   }
 
+  interface RoomMemory {
+    test:Room;
+  }
+
   // Syntax for adding proprties to `global` (ex "global.log")
   namespace NodeJS {
     interface Global {
@@ -31,8 +35,13 @@ declare global {
 
 // When compiling TS to JS and bundling with rollup, the line numbers and file names in error messages change
 // This utility uses source maps to get the line numbers and file names of the original, TS source code
-export const loop = ErrorMapper.wrapLoop(() => {
+export const loop = ErrorMapper.wrapLoop(async () => {
   console.log(`Current game tick is ${Game.time}`);
+
+
+  _.forEach(Game.rooms, r => {console.log(JSON.stringify(r.memory));
+  r.memory.test = r;
+  });
 
   // Automatically delete memory of missing creeps
   for (const name in Memory.creeps) {
