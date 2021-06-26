@@ -1,34 +1,19 @@
-import { ErrorMapper } from "utils/ErrorMapper";
-import {Job, JobType} from "./Job";
+import { doJob, handleDeadCreep } from "controllers/creep"
+import { processRoom } from "controllers/room"
+import { ErrorMapper } from "utils/ErrorMapper"
+import { printHeatMapToTerminal, updateHeatMap } from "utils/heatMap"
+import { Job, JobType } from "./types/Job"
+import { CreepRole, _CreepMemory, _Memory, _RoomMemory } from "./types/memory"
 declare global {
-  /*
-    Example types, expand on these or remove them and add your own.
-    Note: Values, properties defined here do no fully *exist* by this type definiton alone.
-          You must also give them an implemention if you would like to use them. (ex. actually setting a `role` property in a Creeps memory)
-
-    Types added in this `global` block are in an ambient, global context. This is needed because `main.ts` is a module file (uses import or export).
-    Interfaces matching on name from @types/screeps will be merged. This is how you can extend the 'built-in' interfaces from @types/screeps.
-  */
-  // Memory extension samples
-  interface Memory {
-    uuid: number;
-    log: any;
-  }
-
-  interface CreepMemory {
-    role: string;
-    room: string;
-    working: boolean;
-  }
-
-  interface RoomMemory {
-    test:Room;
-  }
+  export interface Memory extends _Memory {}
+  export interface CreepMemory extends _CreepMemory {}
+  export interface RoomMemory extends _RoomMemory {}
 
   // Syntax for adding proprties to `global` (ex "global.log")
   namespace NodeJS {
     interface Global {
-      log: any;
+      log: any
+      uuid(): string
     }
   }
 }
@@ -36,17 +21,40 @@ declare global {
 // When compiling TS to JS and bundling with rollup, the line numbers and file names in error messages change
 // This utility uses source maps to get the line numbers and file names of the original, TS source code
 export const loop = ErrorMapper.wrapLoop(async () => {
-  console.log(`Current game tick is ${Game.time}`);
+  global.uuid = () => {
+    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
+      var r = (Math.random() * 16) | 0,
+        v = c == "x" ? r : (r & 0x3) | 0x8
+      return v.toString(16)
+    })
+  }
+  if (Game.time % 10 === 0) console.log(`Current game tick is ${Game.time}`)
 
+  let roomProps = { creepLimit: 10 }
 
-  _.forEach(Game.rooms, r => {console.log(JSON.stringify(r.memory));
-  r.memory.test = r;
-  });
+  _.forEach(Game.rooms, r => {
+    console.log("processing room ", r.name)
+    processRoom(r, roomProps)
+  })
 
+  let creeps: Creep[] = []
   // Automatically delete memory of missing creeps
   for (const name in Memory.creeps) {
     if (!(name in Game.creeps)) {
-      delete Memory.creeps[name];
+      handleDeadCreep(Memory.creeps[name])
+      delete Memory.creeps[name]
+      continue
     }
+    creeps.push(Game.creeps[name])
   }
-});
+
+  creeps = _.sortBy(creeps, c => {
+    return CreepRole[c.memory.role]
+  }).reverse()
+
+  for (let i = 0; i < creeps.length; i++) {
+    console.log("processing creep", creeps[i].name)
+    doJob(creeps[i])
+    //updateHeatMap(creeps[i])
+  }
+})
