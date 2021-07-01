@@ -3,9 +3,9 @@ import { processRoom } from "controllers/room"
 import { ErrorMapper } from "utils/ErrorMapper"
 import { printHeatMapToTerminal, updateHeatMap } from "utils/heatMap"
 import { Job, JobType } from "./types/Job"
-import { CreepRole, _CreepMemory, _Memory, _RoomMemory } from "./types/memory"
+import { CreepRole, _CreepMemory, _RoomMemory } from "./types/memory"
 declare global {
-  export interface Memory extends _Memory {}
+  // export interface Memory extends _Memory {}
   export interface CreepMemory extends _CreepMemory {}
   export interface RoomMemory extends _RoomMemory {}
 
@@ -30,12 +30,13 @@ export const loop = ErrorMapper.wrapLoop(async () => {
   }
   if (Game.time % 10 === 0) console.log(`Current game tick is ${Game.time}`)
 
-  let roomProps = { creepLimit: 10 }
+  let roomProps = { creepLimit: 9 }
 
   _.forEach(Game.rooms, r => {
-    console.log("processing room ", r.name)
     processRoom(r, roomProps)
   })
+
+  Game.structures
 
   let creeps: Creep[] = []
   // Automatically delete memory of missing creeps
@@ -52,9 +53,14 @@ export const loop = ErrorMapper.wrapLoop(async () => {
     return CreepRole[c.memory.role]
   }).reverse()
 
-  for (let i = 0; i < creeps.length; i++) {
-    console.log("processing creep", creeps[i].name)
-    doJob(creeps[i])
-    //updateHeatMap(creeps[i])
-  }
+  _.forEach(creeps, c => {
+    try {
+      doJob(c)
+    } catch (e) {
+      console.log(
+        c.name,
+        " encountered a problem while doing its " + c.memory.job?.type + " job: " + e
+      )
+    }
+  })
 })

@@ -12,7 +12,8 @@ export interface Job {
   status: string
   description: string
   source?: Source | AnyOwnedStructure | ConstructionSite
-  target?: AnyOwnedStructure
+  target?: AnyStructure
+  targets?: AnyStructure[]
   controller?: StructureController
   site?: ConstructionSite
   dest?: RoomPosition

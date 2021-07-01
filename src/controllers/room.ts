@@ -1,10 +1,11 @@
 import { Job, JobType } from "types/Job"
 import { CreepRole, JobList } from "types/memory"
-import { printHeatMapToTerminal, pruneHeatMap } from "utils/heatMap"
+import { setRoomMiningSpots } from "utils/miningSpot"
+import { processTowers } from "./tower"
 
 export function processRoom(room: Room, roomProps: any) {
   // Map all mining jobs in room
-
+  setRoomMiningSpots(room)
   if (!room.memory.jobs)
     room.memory.jobs = {
       mining: undefined,
@@ -21,36 +22,57 @@ export function processRoom(room: Room, roomProps: any) {
       let dep = deposits[d]
       createMiningJobs(dep)
     }
+    room.memory.jobs.totalMiningJobs = room.memory.jobs.mining.length
   }
   if (room.memory.jobs.upgrading === undefined) {
     room.memory.jobs.upgrading = []
     if (room.controller) createUpgradingJobs(room.controller)
   }
 
-  if (room.memory.jobs.building === undefined) room.memory.jobs.building = []
-  if (room.memory.buildOrders === undefined) room.memory.buildOrders = []
   createBuildJobs(room)
 
-  // Spawn New Creeps
   let creeps = room.find(FIND_MY_CREEPS)
-  if (creeps.length < roomProps.creepLimit) {
-    let num = Math.floor(Math.random() * 1000)
-    let spawn = room.find(FIND_MY_SPAWNS)[0]
+  let spawns = room.find(FIND_MY_SPAWNS)
+  let extensions =
+    (room.memory.extensions as StructureExtension[]) ??
+    (room.find(FIND_STRUCTURES, {
+      filter: { structureType: "extension" }
+    }) as StructureExtension[])
+  _.forEach(spawns, spawn => {
+    // Spawn New Creeps
 
-    let role = CreepRole.All
-    if (
-      creeps.length > 8 &&
-      _.filter(creeps, c => c.memory.role === CreepRole.Upgrader).length <
-        roomProps.upgraders
-    ) {
-      //role = CreepRole.Upgrader
+    let roomEnergy = spawn.store.energy
+    _.forEach(extensions, e => (roomEnergy += e.store.energy))
+
+    console.log(
+      `energy: ${roomEnergy}/${
+        spawns.length * SPAWN_ENERGY_CAPACITY +
+        extensions.length * EXTENSION_ENERGY_CAPACITY[room.controller?.level ?? 0]
+      } `
+    )
+
+    if (creeps.length < roomProps.creepLimit) {
+      let num = Math.floor(Math.random() * 1000)
+      let role = CreepRole.All
+      if (
+        creeps.length > 8 &&
+        _.filter(creeps, c => c.memory.role === CreepRole.Upgrader).length <
+          roomProps.upgraders
+      ) {
+        //role = CreepRole.Upgrader
+      }
+
+      let s = spawn.spawnCreep(
+        [WORK, WORK, WORK, WORK, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE],
+        "Creep" + num,
+        {
+          memory: { role: role }
+        }
+      )
     }
+  })
 
-    spawn.spawnCreep([WORK, CARRY, MOVE], "Creep" + num, {
-      memory: { role: role, working: true }
-    })
-  }
-
+  processTowers(room)
   //   if (Game.time % 150 === 0) pruneHeatMap(room)
   //   if (Game.time % 50 === 0) printHeatMapToTerminal(room)
   //   if (room.memory.roadPlanner)
@@ -105,7 +127,12 @@ const createUpgradingJobs = (controller: StructureController) => {
 }
 
 function createBuildJobs(room: Room) {
+  if (!room.memory.jobs) return
+  if (room.memory.jobs.building === undefined) room.memory.jobs.building = []
+  if (room.memory.buildOrders === undefined) room.memory.buildOrders = []
+
   let sites = room.find(FIND_CONSTRUCTION_SITES)
+  //console.log("found", sites.length, "build jobs")
   _.forEach(sites, s => {
     if (!room.memory.buildOrders?.includes(s.id)) {
       let job: Job = {

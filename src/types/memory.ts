@@ -1,10 +1,6 @@
 import { Job } from "types/Job"
 import { HeatMap } from "utils/heatMap"
 
-export interface _Memory {
-  jobs: Job[]
-}
-
 export interface _CreepMemory {
   role: CreepRole
   job?: Job
@@ -13,10 +9,12 @@ export interface _CreepMemory {
 }
 
 export interface _RoomMemory {
-  heatMap: HeatMap[] | undefined
+  [index: string]: any
+  heatMap?: HeatMap[]
   jobs?: JobList
-  buildOrders: string[] | undefined
-  roadPlanner: RoomPosition[] | undefined
+  buildOrders?: string[]
+  roadPlanner?: RoomPosition[]
+  sources?: MiningSpot[]
 }
 
 export enum CreepRole {
@@ -29,7 +27,18 @@ export enum CreepRole {
 }
 
 export interface JobList {
-  mining: Job[] | undefined
-  upgrading: Job[] | undefined
-  building: Job[] | undefined
+  [index: string]: any
+  totalMiningJobs: number
+  mining?: Job[]
+  upgrading?: Job[]
+  building?: Job[]
+}
+
+export interface MiningSpot {
+  sourceId: string
+  pos: RoomPosition
+  spots: RoomPosition[]
+  hasDedicatedMiner: boolean
+  hasContainer: boolean
+  containerId: string
 }
