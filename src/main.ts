@@ -55,6 +55,7 @@ export const loop = ErrorMapper.wrapLoop(async () => {
 
   _.forEach(creeps, c => {
     try {
+      console.log("testing a thing");
       doJob(c)
     } catch (e) {
       console.log(
