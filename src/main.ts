@@ -28,7 +28,7 @@ export const loop = ErrorMapper.wrapLoop(async () => {
       return v.toString(16)
     })
   }
-  if (Game.time % 10 === 0) console.log(`Current game tick is ${Game.time}`)
+  if (Game.time % 10 === 0) console.log(`THE Current game tick is ${Game.time}`)
 
   let roomProps = { creepLimit: 9 }
 
